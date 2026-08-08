@@ -19,8 +19,9 @@ import {
 
 import {
   Search, FileText, QrCode, Image as ImageIcon,
-  AlertTriangle, CheckSquare, Eye, EyeOff, Upload, ChevronDown, ChevronUp, Lock, CheckCircle2, Info
+  AlertTriangle, CheckSquare, Eye, EyeOff, Upload, ChevronDown, ChevronUp, Lock, CheckCircle2, XCircle, Info
 } from 'lucide-react';
+
 
 export const App: React.FC = () => {
   const [activeRoute, setActiveRoute] = useState<string>('home');
@@ -421,22 +422,37 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* (4) WHAT TO DO: Numbered Imperative Action List */}
-          <Card className="bg-brand-50/50 border-brand-500/20">
-            <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-brand-600" /> Recommended Action Steps
-            </h3>
-            <ol className="space-y-3">
-              {scanResult.explanation?.recommended_actions?.map((act: string, idx: number) => (
-                <li key={idx} className="flex items-start space-x-3 text-sm text-textPrimary">
-                  <span className="bg-brand-500 text-white font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                    {idx + 1}
-                  </span>
-                  <span className="font-medium">{act}</span>
-                </li>
-              ))}
-            </ol>
-          </Card>
+          {/* (4) WHAT TO DO & WHAT NOT TO DO GUIDANCE */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-riskLow-bg/40 border-riskLow-text/30">
+              <h3 className="text-sm font-bold text-riskLow-text uppercase tracking-wider mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-riskLow-text shrink-0" /> WHAT TO DO (SAFE ACTIONS)
+              </h3>
+              <ul className="space-y-3">
+                {scanResult.explanation?.what_to_do?.map((act: string, idx: number) => (
+                  <li key={idx} className="flex items-start space-x-2 text-sm text-textPrimary font-medium">
+                    <span className="text-riskLow-text font-bold text-base">•</span>
+                    <span>{act}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
+            <Card className="bg-riskHigh-bg/40 border-riskHigh-text/30">
+              <h3 className="text-sm font-bold text-riskHigh-text uppercase tracking-wider mb-4 flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-riskHigh-text shrink-0" /> WHAT NOT TO DO (PROHIBITED)
+              </h3>
+              <ul className="space-y-3">
+                {scanResult.explanation?.what_not_to_do?.map((act: string, idx: number) => (
+                  <li key={idx} className="flex items-start space-x-2 text-sm text-textPrimary font-medium">
+                    <span className="text-riskHigh-text font-bold text-base">•</span>
+                    <span>{act}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
 
           {/* (5) TECHNICAL DETAILS: Collapsed Panel with Monospace Data */}
           <Card>

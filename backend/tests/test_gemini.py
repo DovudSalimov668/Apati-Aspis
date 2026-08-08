@@ -23,7 +23,8 @@ async def test_gemini_normal_response():
     mock_gemini_json = json.dumps({
         "summary": "This domain displays several suspicious indicators.",
         "why_risky": ["Uses non-standard web port 8443", "Executable file extension in path"],
-        "recommended_actions": ["Do not download files", "Close the browser tab"],
+        "what_to_do": ["Close the browser tab immediately."],
+        "what_not_to_do": ["Do not download or execute files."],
         "education": ["Check domain names carefully before entering credentials."]
     })
     mock_resp = create_mock_gemini_response(200, mock_gemini_json)
@@ -45,7 +46,8 @@ async def test_gemini_normal_response():
 
         assert res.summary == "This domain displays several suspicious indicators."
         assert len(res.why_risky) == 2
-        assert "Do not download files" in res.recommended_actions
+        assert "Close the browser tab immediately." in res.what_to_do
+        assert "Do not download or execute files." in res.what_not_to_do
 
 @pytest.mark.asyncio
 async def test_gemini_missing_api_key():
@@ -61,6 +63,8 @@ async def test_gemini_missing_api_key():
         # Should return deterministic fallback
         assert "Significant digital security risk detected" in res.summary
         assert "Phishing signal" in res.why_risky
+        assert len(res.what_to_do) >= 1
+        assert len(res.what_not_to_do) >= 1
 
 @pytest.mark.asyncio
 async def test_gemini_timeout_fallback():
@@ -135,5 +139,4 @@ async def test_gemini_prompt_injection_sanitization():
             reasons=["Adversarial input test"],
             evidence={}
         )
-        # Deterministic assessment is preserved; score and risk level are NOT overridden
         assert res.summary.startswith("Significant digital security risk")

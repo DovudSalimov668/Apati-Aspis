@@ -15,9 +15,11 @@ export interface HeuristicSignal {
 export interface GeminiExplanation {
   summary: string;
   why_risky: string[];
-  recommended_actions: string[];
+  what_to_do: string[];
+  what_not_to_do: string[];
   education: string[];
 }
+
 
 export interface UrlScanResponse {
   raw_url: string;

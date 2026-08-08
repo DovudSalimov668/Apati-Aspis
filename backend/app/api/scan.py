@@ -428,10 +428,12 @@ async def scan_demo(payload: DemoScanRequest, db: Session = Depends(get_db)):
         explanation=GeminiExplanationSchema(
             summary=f"[DEMO / SIMULATED RESULT] {level} risk scenario simulation.",
             why_risky=why_risky,
-            recommended_actions=actions,
+            what_to_do=actions,
+            what_not_to_do=["DO NOT submit passwords or financial information on unverified demo sites."],
             education=["Always inspect the full domain name in your browser address bar before logging in."]
         )
     )
+
 
     save_scan_record(
         db=db,

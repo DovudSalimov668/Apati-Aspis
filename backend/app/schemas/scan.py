@@ -16,8 +16,10 @@ class HeuristicSignalSchema(BaseModel):
 class GeminiExplanationSchema(BaseModel):
     summary: str
     why_risky: List[str]
-    recommended_actions: List[str]
+    what_to_do: List[str]
+    what_not_to_do: List[str]
     education: List[str]
+
 
 class UrlScanResponse(BaseModel):
     raw_url: str
