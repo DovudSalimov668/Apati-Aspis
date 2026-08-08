@@ -1,22 +1,73 @@
 import React from 'react';
+import { ShieldCheck, ShieldAlert, ShieldX, AlertOctagon } from 'lucide-react';
 
-type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+export type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL' | string;
 
 interface RiskBadgeProps {
   level: RiskLevel;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ level }) => {
-  const badgeStyles = {
-    LOW: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-    MODERATE: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    HIGH: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
-    CRITICAL: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
+export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'md' }) => {
+  const normLevel = (level || 'LOW').toUpperCase();
+
+  const configs = {
+    LOW: {
+      text: 'LOW RISK',
+      icon: ShieldCheck,
+      bgColor: '#E7F7EF',
+      textColor: '#1C8A5B',
+      borderColor: '#B8EBD0',
+    },
+    MODERATE: {
+      text: 'MODERATE RISK',
+      icon: ShieldAlert,
+      bgColor: '#FFF4DF',
+      textColor: '#B9821A',
+      borderColor: '#FCE4B6',
+    },
+    HIGH: {
+      text: 'HIGH RISK',
+      icon: ShieldX,
+      bgColor: '#FDEAEA',
+      textColor: '#D14343',
+      borderColor: '#F8C8C8',
+    },
+    CRITICAL: {
+      text: 'CRITICAL RISK',
+      icon: AlertOctagon,
+      bgColor: '#F7E3E9',
+      textColor: '#8F1E3B',
+      borderColor: '#ECC0CC',
+    },
+  };
+
+  const config = configs[normLevel as keyof typeof configs] || configs.LOW;
+  const IconComponent = config.icon;
+
+  const sizeClasses = {
+    sm: 'px-2 py-0.5 text-xs font-bold gap-1 border',
+    md: 'px-3 py-1 text-xs font-extrabold gap-1.5 border',
+    lg: 'px-4 py-1.5 text-sm font-black gap-2 border-2',
+  };
+
+  const iconSizes = {
+    sm: 'w-3.5 h-3.5',
+    md: 'w-4 h-4',
+    lg: 'w-5 h-5',
   };
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${badgeStyles[level]}`}>
-      {level} RISK
+    <span
+      style={{
+        backgroundColor: config.bgColor,
+        color: config.textColor,
+        borderColor: config.borderColor,
+      }}
+      className={`inline-flex items-center rounded-full tracking-wider uppercase ${sizeClasses[size]}`}
+    >
+      <IconComponent className={`${iconSizes[size]} flex-shrink-0`} aria-hidden="true" />
+      <span>{config.text}</span>
     </span>
   );
 };

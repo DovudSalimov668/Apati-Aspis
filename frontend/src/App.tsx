@@ -1,36 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { RiskBadge } from './components/RiskBadge';
-import { Alert } from './components/Alert';
+import { Layout } from './components/Layout';
+import { Card } from './components/Card';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
-import { Card } from './components/Card';
+import { RiskBadge } from './components/RiskBadge';
+import { Alert } from './components/Alert';
+import { ScoreDial } from './components/ScoreDial';
+import { EvidenceCard } from './components/EvidenceCard';
+import { StepIndicator } from './components/StepIndicator';
+import { DemoBadge } from './components/DemoBadge';
+import { EmptyState } from './components/EmptyState';
+import { ErrorState } from './components/ErrorState';
 import {
   fetchHealth, scanUrl, scanMessage, scanQrFile, scanImageFile,
   fetchCheckupQuestions, submitCheckup, fetchScanHistory, checkPassword,
-  HealthResponse, CheckupQuestion, CheckupReport, ScanRecordHistory, PasswordCheckResponse
+  CheckupQuestion, CheckupReport, ScanRecordHistory, PasswordCheckResponse
 } from './services/api';
 import {
-  Search, ShieldAlert, FileText, QrCode, Image as ImageIcon,
-  AlertTriangle, CheckSquare, Lightbulb, Info, Upload, ShieldCheck, Award, History, Clock, KeyRound, Lock
+  Search, FileText, QrCode, Image as ImageIcon,
+  AlertTriangle, CheckSquare, Eye, EyeOff, Upload, ChevronDown, ChevronUp, Lock, CheckCircle2, Info
 } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'url' | 'message' | 'qr' | 'image' | 'checkup' | 'history' | 'password'>('url');
-  const [inputContent, setInputContent] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeRoute, setActiveRoute] = useState<string>('home');
+  const [inputTab, setInputTab] = useState<'url' | 'message' | 'qr' | 'image'>('url');
   
-  const [healthStatus, setHealthStatus] = useState<HealthResponse | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [messageInput, setMessageInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [healthError, setHealthError] = useState<string | null>(null);
-  const [isHealthLoading, setIsHealthLoading] = useState<boolean>(true);
 
   // Scan state
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<any | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [isTechnicalExpanded, setIsTechnicalExpanded] = useState<boolean>(false);
 
-  // Checkup state
+  // Password check state
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordReport, setPasswordReport] = useState<PasswordCheckResponse | null>(null);
+  const [isPasswordChecking, setIsPasswordChecking] = useState<boolean>(false);
+
+  // Security Checkup state
   const [questions, setQuestions] = useState<CheckupQuestion[]>([]);
+  const [currentQIndex, setCurrentQIndex] = useState<number>(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [checkupReport, setCheckupReport] = useState<CheckupReport | null>(null);
   const [isCheckupSubmitting, setIsCheckupSubmitting] = useState<boolean>(false);
@@ -39,22 +54,13 @@ export const App: React.FC = () => {
   const [historyRecords, setHistoryRecords] = useState<ScanRecordHistory[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(false);
 
-  // Password check state
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordReport, setPasswordReport] = useState<PasswordCheckResponse | null>(null);
-  const [isPasswordChecking, setIsPasswordChecking] = useState<boolean>(false);
-
   useEffect(() => {
     fetchHealth()
-      .then((data) => {
-        setHealthStatus(data);
+      .then(() => {
         setHealthError(null);
       })
       .catch((err) => {
         setHealthError(err.message || 'Failed to connect to backend server');
-      })
-      .finally(() => {
-        setIsHealthLoading(false);
       });
 
     fetchCheckupQuestions()
@@ -67,7 +73,7 @@ export const App: React.FC = () => {
     try {
       const records = await fetchScanHistory(20);
       setHistoryRecords(records);
-    } catch (err: any) {
+    } catch {
       setScanError('Failed to load scan history');
     } finally {
       setIsHistoryLoading(false);
@@ -75,51 +81,70 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeRoute === 'history') {
       loadHistory();
     }
-  }, [activeTab]);
+  }, [activeRoute]);
 
-  const handleScan = async (e?: React.FormEvent) => {
+  const handleScanSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
     setIsScanning(true);
     setScanError(null);
     setScanResult(null);
 
     try {
-      if (activeTab === 'url') {
-        if (!inputContent.trim()) throw new Error('Please enter a target URL.');
-        const res = await scanUrl(inputContent.trim());
+      if (inputTab === 'url') {
+        if (!urlInput.trim()) throw new Error('Please enter a target URL.');
+        const res = await scanUrl(urlInput.trim());
         setScanResult(res);
-      } else if (activeTab === 'message') {
-        if (!inputContent.trim()) throw new Error('Please enter message content.');
-        const res = await scanMessage(inputContent.trim());
+        setActiveRoute('result');
+      } else if (inputTab === 'message') {
+        if (!messageInput.trim()) throw new Error('Please enter message content.');
+        const res = await scanMessage(messageInput.trim());
         setScanResult(res);
-      } else if (activeTab === 'qr') {
+        setActiveRoute('result');
+      } else if (inputTab === 'qr') {
         if (!selectedFile) throw new Error('Please select a QR image file.');
         const res = await scanQrFile(selectedFile);
         setScanResult(res);
-      } else if (activeTab === 'image') {
+        setActiveRoute('result');
+      } else if (inputTab === 'image') {
         if (!selectedFile) throw new Error('Please select a screenshot or image file.');
         const res = await scanImageFile(selectedFile);
         setScanResult(res);
+        setActiveRoute('result');
       }
     } catch (err: any) {
-      setScanError(err.message || 'An error occurred during analysis.');
+      setScanError(err.message || 'Analysis error occurred');
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handlePasswordCheck = async (e: React.FormEvent) => {
+  const handleDemoScenario = async (scen: 'safe' | 'moderate' | 'high' | 'critical') => {
+    setIsScanning(true);
+    setScanError(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/scan/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scen }),
+      });
+      const res = await response.json();
+      setScanResult(res);
+      setActiveRoute('result');
+    } catch (err: any) {
+      setScanError(err.message || 'Demo scenario failed');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordInput) return;
-
     setIsPasswordChecking(true);
     setScanError(null);
-    setPasswordReport(null);
-
     try {
       const res = await checkPassword(passwordInput);
       setPasswordReport(res);
@@ -130,456 +155,580 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleCheckupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCheckupAnswerSelect = (optionId: string) => {
+    const q = questions[currentQIndex];
+    if (!q) return;
+    const updated = { ...userAnswers, [q.id]: optionId };
+    setUserAnswers(updated);
+    if (currentQIndex < questions.length - 1) {
+      setCurrentQIndex(currentQIndex + 1);
+    }
+  };
+
+  const handleFinishCheckup = async () => {
     setIsCheckupSubmitting(true);
     try {
       const report = await submitCheckup(userAnswers);
       setCheckupReport(report);
     } catch (err: any) {
-      setScanError(err.message || 'Failed to evaluate checkup');
+      setScanError(err.message || 'Failed to evaluate security checkup');
     } finally {
       setIsCheckupSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      <Header />
-
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-12">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-100 sm:text-4xl mb-3">
-            Detect Deception Before It Strikes
-          </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Analyze suspicious URLs, text messages, QR codes, screenshots, password breach safety, or complete your Security Checkup.
-          </p>
+    <Layout activeRoute={activeRoute} onNavigate={(r) => { setActiveRoute(r); setScanError(null); }}>
+      {/* Backend Status Banner */}
+      {healthError && (
+        <div className="mb-6">
+          <Alert type="warning" title="Backend Server Disconnected">
+            Ensure FastAPI server is running on <code>http://localhost:8000</code>. ({healthError})
+          </Alert>
         </div>
+      )}
 
-        {/* Backend Connection Status Banner */}
-        <div className="mb-8">
-          {isHealthLoading ? (
-            <Alert type="info" title="Backend Connection">
-              Connecting to APATI ASPIS API server...
-            </Alert>
-          ) : healthError ? (
-            <Alert type="warning" title="Backend Status">
-              {healthError} (Ensure backend server is running on http://localhost:8000)
-            </Alert>
-          ) : (
-            <Alert type="success" title="Backend Connected">
-              Connected to <strong>{healthStatus?.service}</strong> (v{healthStatus?.version} — {healthStatus?.environment} mode)
-            </Alert>
-          )}
-        </div>
+      {/* PAGE 1: HOME */}
+      {activeRoute === 'home' && (
+        <div className="space-y-10">
+          <div className="text-center max-w-2xl mx-auto pt-4 space-y-3">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-textPrimary tracking-tight">
+              Detect Digital Deception Before It Strikes
+            </h1>
+            <p className="text-base text-textSecondary leading-relaxed">
+              Analyze suspicious URLs, text messages, QR codes, screenshots, and password breach safety in real time.
+            </p>
+          </div>
 
-        {/* Mode Selector Tabs */}
-        <div className="flex justify-center border-b border-slate-800 mb-8 overflow-x-auto">
-          <button
-            onClick={() => { setActiveTab('url'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'url' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Search className="w-4 h-4" />
-            <span>URL Scanner</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('message'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'message' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Message / Text</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('qr'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'qr' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-            <span>QR Code</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('image'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'image' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ImageIcon className="w-4 h-4" />
-            <span>Image / Screenshot</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('password'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'password' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <KeyRound className="w-4 h-4" />
-            <span>Password Check</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('checkup'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'checkup' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Security Checkup</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('history'); setScanResult(null); }}
-            className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-              activeTab === 'history' ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            <span>Scan History</span>
-          </button>
-        </div>
+          {/* Tabbed Input Card */}
+          <Card className="max-w-3xl mx-auto">
+            {/* Input Tabs */}
+            <div className="flex border-b border-border mb-6">
+              <button
+                onClick={() => setInputTab('url')}
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-semibold text-xs transition-colors ${
+                  inputTab === 'url' ? 'border-brand-500 text-brand-600' : 'border-transparent text-textSecondary hover:text-textPrimary'
+                }`}
+              >
+                <Search className="w-4 h-4" /> <span>URL Scanner</span>
+              </button>
+              <button
+                onClick={() => setInputTab('message')}
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-semibold text-xs transition-colors ${
+                  inputTab === 'message' ? 'border-brand-500 text-brand-600' : 'border-transparent text-textSecondary hover:text-textPrimary'
+                }`}
+              >
+                <FileText className="w-4 h-4" /> <span>Message / Text</span>
+              </button>
+              <button
+                onClick={() => setInputTab('qr')}
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-semibold text-xs transition-colors ${
+                  inputTab === 'qr' ? 'border-brand-500 text-brand-600' : 'border-transparent text-textSecondary hover:text-textPrimary'
+                }`}
+              >
+                <QrCode className="w-4 h-4" /> <span>QR Code</span>
+              </button>
+              <button
+                onClick={() => setInputTab('image')}
+                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-semibold text-xs transition-colors ${
+                  inputTab === 'image' ? 'border-brand-500 text-brand-600' : 'border-transparent text-textSecondary hover:text-textPrimary'
+                }`}
+              >
+                <ImageIcon className="w-4 h-4" /> <span>Image / Screenshot</span>
+              </button>
+            </div>
 
-        {/* Input Form Card for URL, Message, QR, Image */}
-        {activeTab !== 'checkup' && activeTab !== 'history' && activeTab !== 'password' && (
-          <Card className="mb-8">
-            <form onSubmit={handleScan} className="space-y-4">
-              {activeTab === 'url' || activeTab === 'message' ? (
-                <div className="flex gap-3 items-end">
-                  {activeTab === 'url' ? (
-                    <Input
-                      label="Enter URL to analyze"
-                      value={inputContent}
-                      onChange={(e) => setInputContent(e.target.value)}
-                      placeholder="https://example.com"
-                    />
-                  ) : (
-                    <div className="w-full">
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Paste SMS, Email, or Chat message</label>
-                      <textarea
-                        rows={3}
-                        value={inputContent}
-                        onChange={(e) => setInputContent(e.target.value)}
-                        placeholder="Paste suspicious text message or email content here..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
-                      />
-                    </div>
-                  )}
-                  <Button variant="primary" type="submit" isLoading={isScanning}>
-                    Analyze Risk
+            <form onSubmit={handleScanSubmit} className="space-y-4">
+              {inputTab === 'url' && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    placeholder="https://suspicious-website.com"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                  <Button variant="primary" size="lg" type="submit" isLoading={isScanning} className="sm:w-auto w-full shrink-0">
+                    Analyze URL
                   </Button>
                 </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="flex-1 w-full">
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      {activeTab === 'qr' ? 'Upload QR Code Image' : 'Upload Screenshot or Picture'}
-                    </label>
+              )}
+
+              {inputTab === 'message' && (
+                <div className="space-y-3">
+                  <textarea
+                    rows={4}
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder="Paste suspicious SMS, Email, or Chat message content..."
+                    className="w-full bg-surface border border-border rounded-lg p-3 text-sm text-textPrimary placeholder-textSecondary focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="primary" size="md" type="submit" isLoading={isScanning}>
+                      Analyze Message Content
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(inputTab === 'qr' || inputTab === 'image') && (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-brand-500 transition-colors bg-slate-50/50">
+                    <Upload className="w-8 h-8 text-brand-500 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-textPrimary">
+                      {inputTab === 'qr' ? 'Upload QR Code Image' : 'Upload Screenshot / Picture'}
+                    </p>
+                    <p className="text-xs text-textSecondary mb-3">PNG, JPG, WEBP up to 10MB</p>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                      className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer bg-slate-950 border border-slate-800 p-2 rounded-lg"
+                      className="text-xs text-textSecondary mx-auto cursor-pointer"
                     />
                   </div>
-                  <Button variant="primary" type="submit" isLoading={isScanning} className="w-full sm:w-auto">
-                    <Upload className="w-4 h-4 mr-2" /> Upload & Analyze
-                  </Button>
+                  <div className="flex justify-end">
+                    <Button variant="primary" size="md" type="submit" isLoading={isScanning}>
+                      Upload & Analyze
+                    </Button>
+                  </div>
                 </div>
               )}
             </form>
           </Card>
-        )}
 
-        {/* Password Check Form View */}
-        {activeTab === 'password' && (
-          <div className="space-y-6 mb-8">
-            <Card className="border-slate-700">
-              <h3 className="text-xl font-bold text-slate-100 mb-2 flex items-center gap-2">
-                <KeyRound className="w-6 h-6 text-sky-400" /> Password Breach Checker (K-Anonymity)
-              </h3>
-              <p className="text-sm text-slate-400 mb-6">
-                Checks if your password has appeared in public data breaches. Uses <strong>K-Anonymity privacy protection</strong> — your plaintext password is <strong>never</strong> transmitted over the internet or saved to a database.
-              </p>
+          {/* Hackathon Demo Scenarios Strip */}
+          <div className="max-w-3xl mx-auto bg-slate-100 p-4 rounded-xl border border-border">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+              <span className="text-xs font-bold text-textPrimary uppercase tracking-wider">
+                Hackathon Demo Scenarios (Pre-loaded):
+              </span>
+              <DemoBadge />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleDemoScenario('safe')}>
+                Low Risk Demo
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => handleDemoScenario('moderate')}>
+                Moderate Risk Demo
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => handleDemoScenario('high')}>
+                High Risk Demo
+              </Button>
+              <Button variant="danger" size="sm" onClick={() => handleDemoScenario('critical')}>
+                Critical Risk Demo
+              </Button>
+            </div>
+          </div>
 
-              <form onSubmit={handlePasswordCheck} className="flex gap-3 items-end mb-6">
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Enter password to test</label>
-                  <input
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Enter password..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm font-mono"
-                  />
+          {/* 3-Step How It Works */}
+          <StepIndicator />
+
+          {/* Muted Powered-By Strip */}
+          <div className="text-center pt-6 border-t border-border">
+            <span className="text-xs font-semibold uppercase text-textSecondary tracking-wider block mb-3">
+              Powered by Multi-Layer Threat Intelligence
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-textSecondary opacity-75">
+              <span>Google Safe Browsing</span>
+              <span>•</span>
+              <span>URLhaus (Abuse.ch)</span>
+              <span>•</span>
+              <span>VirusTotal</span>
+              <span>•</span>
+              <span>HIBP Pwned Passwords</span>
+              <span>•</span>
+              <span>Gemini AI Engine</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAGE 2: SCAN RESULT (/scan/:id) */}
+      {activeRoute === 'result' && scanResult && (
+        <div className="space-y-8">
+          {/* Sticky Header Banner */}
+          <div className="sticky top-0 z-10 bg-surface border-b border-border p-3 shadow-sm flex items-center justify-between rounded-lg">
+            <span className="text-xs font-bold text-textPrimary truncate max-w-md">
+              Target: <span className="font-mono text-brand-600">{scanResult.normalized_url || scanResult.raw_url || scanResult.raw_message}</span>
+            </span>
+            <RiskBadge level={scanResult.risk_level} size="sm" />
+          </div>
+
+          {/* (1) CONCLUSION: ScoreDial + RiskBadge */}
+          <Card className="flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/50">
+            <div className="flex items-center space-x-6">
+              <ScoreDial score={scanResult.risk_score} level={scanResult.risk_level} size={110} />
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <RiskBadge level={scanResult.risk_level} size="lg" />
+                  {scanResult.evidence?.demo_mode && <DemoBadge />}
                 </div>
-                <Button variant="primary" type="submit" isLoading={isPasswordChecking}>
-                  Check Breach Safety
-                </Button>
-              </form>
+                <h2 className="text-xl font-bold text-textPrimary">Security Assessment Conclusion</h2>
+                <p className="text-xs text-textSecondary">
+                  Confidence Rating: <strong className="text-textPrimary">{scanResult.confidence || 'HIGH'}</strong>
+                </p>
+              </div>
+            </div>
 
-              {passwordReport && (
-                <div className="space-y-4 border-t border-slate-800 pt-6">
-                  <div className={`p-4 rounded-lg border ${passwordReport.is_pwned ? 'bg-rose-950/30 border-rose-800/60' : 'bg-emerald-950/30 border-emerald-800/60'}`}>
-                    <div className="flex items-center space-x-3 mb-2">
-                      {passwordReport.is_pwned ? (
-                        <AlertTriangle className="w-6 h-6 text-rose-400" />
-                      ) : (
-                        <Lock className="w-6 h-6 text-emerald-400" />
-                      )}
-                      <h4 className="text-lg font-bold text-slate-100">{passwordReport.message}</h4>
+            <Button variant="secondary" size="sm" onClick={() => setActiveRoute('home')}>
+              Scan Another Target
+            </Button>
+          </Card>
+
+          {/* (2) WHY: Plain-Language Icon-led Bullets */}
+          <Card>
+            <h3 className="text-sm font-bold text-textPrimary uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Info className="w-4 h-4 text-brand-500" /> Why Is This Target Risky?
+            </h3>
+            <div className="space-y-3">
+              {scanResult.explanation?.why_risky?.map((reason: string, idx: number) => (
+                <div key={idx} className="flex items-start space-x-3 text-sm text-textPrimary bg-slate-50 p-3 rounded-lg border border-border">
+                  <AlertTriangle className="w-4 h-4 text-riskMod-text shrink-0 mt-0.5" />
+                  <span>{reason}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* (3) EVIDENCE: Provider Cards Collapsed by Default */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-textPrimary uppercase tracking-wider mb-2">
+              Threat Intelligence Evidence ({Object.keys(scanResult.evidence?.threat_intelligence?.providers || {}).length || 5} Providers)
+            </h3>
+
+            {/* Provider Evidence Cards */}
+            <EvidenceCard
+              providerName="Google Safe Browsing API"
+              state={scanResult.evidence?.threat_intelligence?.providers?.GoogleSafeBrowsing?.state || 'NO_MATCH'}
+              details={scanResult.evidence?.threat_intelligence?.providers?.GoogleSafeBrowsing || { state: 'NO_MATCH' }}
+            />
+            <EvidenceCard
+              providerName="URLhaus Malware Database"
+              state={scanResult.evidence?.threat_intelligence?.providers?.URLhaus?.state || 'NO_MATCH'}
+              details={scanResult.evidence?.threat_intelligence?.providers?.URLhaus || { state: 'NO_MATCH' }}
+            />
+            <EvidenceCard
+              providerName="VirusTotal Engine Scanner"
+              state={scanResult.evidence?.threat_intelligence?.providers?.VirusTotal?.state || 'NO_MATCH'}
+              details={scanResult.evidence?.threat_intelligence?.providers?.VirusTotal || { state: 'NO_MATCH' }}
+            />
+            <EvidenceCard
+              providerName="DNS Pre-flight Resolver"
+              state={scanResult.ssrf_blocked ? 'MATCH' : 'NO_MATCH'}
+              details={scanResult.evidence?.ssrf_check || { status: 'SAFE' }}
+            />
+            <EvidenceCard
+              providerName="RDAP / Domain Registration"
+              state="NO_MATCH"
+              details={{ domain: scanResult.domain, status: 'Active Registration' }}
+            />
+          </div>
+
+          {/* (4) WHAT TO DO: Numbered Imperative Action List */}
+          <Card className="bg-brand-50/50 border-brand-500/20">
+            <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-brand-600" /> Recommended Action Steps
+            </h3>
+            <ol className="space-y-3">
+              {scanResult.explanation?.recommended_actions?.map((act: string, idx: number) => (
+                <li key={idx} className="flex items-start space-x-3 text-sm text-textPrimary">
+                  <span className="bg-brand-500 text-white font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span className="font-medium">{act}</span>
+                </li>
+              ))}
+            </ol>
+          </Card>
+
+          {/* (5) TECHNICAL DETAILS: Collapsed Panel with Monospace Data */}
+          <Card>
+            <div
+              onClick={() => setIsTechnicalExpanded(!isTechnicalExpanded)}
+              className="flex items-center justify-between cursor-pointer"
+            >
+              <h3 className="text-sm font-bold text-textPrimary uppercase tracking-wider">
+                Technical Evidence Raw Payload
+              </h3>
+              <Button variant="ghost" size="sm">
+                {isTechnicalExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </div>
+
+            {isTechnicalExpanded && (
+              <div className="mt-4 pt-4 border-t border-border bg-slate-900 text-slate-200 font-mono text-xs p-4 rounded-lg overflow-x-auto">
+                <pre>{JSON.stringify(scanResult, null, 2)}</pre>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* PAGE 3: PASSWORD CHECK (/password-check) */}
+      {activeRoute === 'password-check' && (
+        <div className="space-y-8 max-w-2xl mx-auto">
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-extrabold text-textPrimary tracking-tight">Password Breach Checker</h2>
+            <p className="text-sm text-textSecondary">
+              Check if a password has appeared in public breach datasets using <strong>K-Anonymity privacy protection</strong>.
+            </p>
+          </div>
+
+          <Card>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="relative">
+                <Input
+                  label="Password to inspect"
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter password..."
+                  className="font-mono text-sm pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-8 text-textSecondary hover:text-textPrimary"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className="bg-brand-50 p-3 rounded-lg border border-brand-500/20 text-xs text-brand-700 flex items-start space-x-2">
+                <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  <strong>K-Anonymity Safeguard:</strong> Your password is SHA-1 hashed locally in memory. Only the first 5 characters of the hash are transmitted. Your full password is <strong>never</strong> sent over the network or saved.
+                </span>
+              </div>
+
+              <Button variant="primary" size="lg" type="submit" isLoading={isPasswordChecking} className="w-full">
+                Check Breach Safety
+              </Button>
+            </form>
+
+            {passwordReport && (
+              <div className="mt-6 pt-6 border-t border-border space-y-4">
+                <div
+                  style={{
+                    backgroundColor: passwordReport.is_pwned ? '#FDEAEA' : '#E7F7EF',
+                    borderColor: passwordReport.is_pwned ? '#F8C8C8' : '#B8EBD0',
+                  }}
+                  className="p-4 rounded-xl border flex items-start space-x-3"
+                >
+                  {passwordReport.is_pwned ? (
+                    <AlertTriangle className="w-6 h-6 text-riskHigh-text shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 className="w-6 h-6 text-riskLow-text shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <h4 className="text-base font-bold text-textPrimary mb-1">{passwordReport.message}</h4>
+                    <p className="text-xs text-textSecondary leading-relaxed">{passwordReport.disclaimer}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h5 className="text-xs font-semibold text-textPrimary uppercase tracking-wider">Recommendations</h5>
+                  {passwordReport.recommendations.map((rec, idx) => (
+                    <div key={idx} className="flex items-start space-x-2 text-sm text-textSecondary">
+                      <CheckSquare className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
+                      <span>{rec}</span>
                     </div>
-                    <p className="text-xs text-slate-300 leading-relaxed italic border-t border-slate-800/50 pt-2 mt-2">
-                      {passwordReport.disclaimer}
-                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* PAGE 4: SECURITY CHECKUP (/checkup) */}
+      {activeRoute === 'checkup' && (
+        <div className="space-y-8 max-w-2xl mx-auto">
+          {!checkupReport ? (
+            <Card>
+              {questions.length > 0 && questions[currentQIndex] && (
+                <div className="space-y-6">
+                  {/* Slim Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-semibold text-textSecondary">
+                      <span>Question {currentQIndex + 1} of {questions.length}</span>
+                      <span>Category: {questions[currentQIndex].category_title}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-border">
+                      <div
+                        className="bg-brand-500 h-full transition-all duration-300"
+                        style={{ width: `${((currentQIndex + 1) / questions.length) * 100}%` }}
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Security Advice</h4>
-                    <ul className="space-y-2">
-                      {passwordReport.recommendations.map((rec, idx) => (
-                        <li key={idx} className="flex items-start space-x-2 text-sm text-slate-300">
-                          <CheckSquare className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
-                          <span>{rec}</span>
-                        </li>
+                  {/* Question */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-textPrimary leading-snug">
+                      {questions[currentQIndex].question}
+                    </h3>
+
+                    <div className="space-y-3">
+                      {questions[currentQIndex].options.map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => handleCheckupAnswerSelect(opt.id)}
+                          className={`w-full text-left p-4 rounded-xl border transition-all flex items-start space-x-3 ${
+                            userAnswers[questions[currentQIndex].id] === opt.id
+                              ? 'border-brand-500 bg-brand-50 text-brand-700 font-semibold'
+                              : 'border-border bg-surface hover:bg-slate-50 text-textPrimary'
+                          }`}
+                        >
+                          <span className="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                            {opt.id}
+                          </span>
+                          <span className="text-sm">{opt.text}</span>
+                        </button>
                       ))}
-                    </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-4 border-t border-border">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={currentQIndex === 0}
+                      onClick={() => setCurrentQIndex(currentQIndex - 1)}
+                    >
+                      Previous
+                    </Button>
+                    {currentQIndex === questions.length - 1 ? (
+                      <Button variant="primary" size="md" onClick={handleFinishCheckup} isLoading={isCheckupSubmitting}>
+                        Submit & View Score
+                      </Button>
+                    ) : (
+                      <Button variant="primary" size="sm" onClick={() => setCurrentQIndex(currentQIndex + 1)}>
+                        Next Question
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
             </Card>
-          </div>
-        )}
+          ) : (
+            /* Results Report Page */
+            <div className="space-y-6">
+              <Card className="text-center space-y-4">
+                <ScoreDial score={checkupReport.overall_score} level={checkupReport.security_level === 'EXCELLENT' ? 'LOW' : 'HIGH'} size={130} />
+                <h2 className="text-2xl font-extrabold text-textPrimary">Your Digital Security Profile</h2>
+                <Alert type="warning" title={`Weakest Category: ${checkupReport.weakest_category}`}>
+                  Focus your immediate security improvements on this category to lower risk.
+                </Alert>
+              </Card>
 
-        {/* Scan History View */}
-        {activeTab === 'history' && (
-          <Card className="mb-8 border-slate-700">
-            <h3 className="text-xl font-bold text-slate-100 mb-2 flex items-center gap-2">
-              <History className="w-6 h-6 text-sky-400" /> Recent Scan History
-            </h3>
-            <p className="text-sm text-slate-400 mb-6">
-              Persisted scan results stored locally in SQLite database (`apati_aspis.db`).
-            </p>
-
-            {isHistoryLoading ? (
-              <p className="text-sm text-slate-400 py-6 text-center">Loading scan history...</p>
-            ) : historyRecords.length === 0 ? (
-              <p className="text-sm text-slate-500 py-6 text-center">No scan history recorded yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {historyRecords.map((item) => (
-                  <div key={item.id} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="text-xs font-semibold uppercase bg-slate-800 text-sky-400 px-2 py-0.5 rounded">
-                          {item.scan_type}
-                        </span>
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {new Date(item.created_at).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-200 truncate max-w-md">{item.indicator}</p>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg font-black text-slate-100">{item.risk_score}<span className="text-xs text-slate-500">/100</span></span>
-                      <RiskBadge level={item.risk_level} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* Security Checkup View */}
-        {activeTab === 'checkup' && (
-          <div className="space-y-6 mb-8">
-            <Card className="border-slate-700">
-              <h3 className="text-xl font-bold text-slate-100 mb-2 flex items-center gap-2">
-                <ShieldCheck className="w-6 h-6 text-sky-400" /> Digital Security Checkup
-              </h3>
-              <p className="text-sm text-slate-400 mb-6">
-                Answer 12 security practice questions across 6 categories to receive your security score and personalized recommendations.
-              </p>
-
-              <form onSubmit={handleCheckupSubmit} className="space-y-6">
-                {questions.map((q, qIdx) => (
-                  <div key={q.id} className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-                    <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider block mb-1">
-                      Category {qIdx + 1}/12: {q.category_title}
-                    </span>
-                    <p className="text-sm font-semibold text-slate-200 mb-3">{q.question}</p>
-
-                    <div className="space-y-2">
-                      {q.options.map((opt) => (
-                        <label
-                          key={opt.id}
-                          className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            userAnswers[q.id] === opt.id
-                              ? 'border-sky-500 bg-sky-950/20 text-sky-200'
-                              : 'border-slate-800 hover:border-slate-700 text-slate-300'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name={`q_${q.id}`}
-                            value={opt.id}
-                            checked={userAnswers[q.id] === opt.id}
-                            onChange={() => setUserAnswers({ ...userAnswers, [q.id]: opt.id })}
-                            className="mt-0.5 text-sky-500 focus:ring-sky-500"
-                          />
-                          <span className="text-xs leading-relaxed">{opt.text}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-                <Button variant="primary" type="submit" isLoading={isCheckupSubmitting} className="w-full">
-                  Calculate Security Profile Score
-                </Button>
-              </form>
-            </Card>
-
-            {/* Checkup Results Report */}
-            {checkupReport && (
-              <Card className="border-sky-700 bg-slate-900/90">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
-                  <div className="flex items-center space-x-3">
-                    <Award className="w-7 h-7 text-sky-400" />
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-100">Security Profile Report</h3>
-                      <p className="text-xs text-slate-400">Weakest Category: <strong className="text-amber-400">{checkupReport.weakest_category}</strong></p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-3xl font-black text-slate-100">{checkupReport.overall_score}<span className="text-xs text-slate-500">/100</span></span>
-                    <div className="text-xs font-bold text-sky-400 uppercase tracking-wider">{checkupReport.security_level}</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <Card className="space-y-4">
+                <h3 className="text-sm font-bold text-textPrimary uppercase tracking-wider">Per-Category Breakdown</h3>
+                <div className="space-y-3">
                   {Object.entries(checkupReport.category_scores).map(([catKey, info]) => (
-                    <div key={catKey} className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-                      <div className="flex justify-between items-center text-xs font-medium mb-1">
-                        <span className="text-slate-300">{info.title}</span>
-                        <span className="font-bold text-sky-400">{info.score}%</span>
+                    <div key={catKey} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-textPrimary">{info.title}</span>
+                        <span className="text-brand-600">{info.score}%</span>
                       </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-border">
                         <div
-                          className={`h-full ${info.score >= 80 ? 'bg-emerald-500' : info.score >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                          className={`h-full ${info.score >= 80 ? 'bg-riskLow-text' : info.score >= 50 ? 'bg-riskMod-text' : 'bg-riskHigh-text'}`}
                           style={{ width: `${info.score}%` }}
                         />
                       </div>
                     </div>
                   ))}
                 </div>
-
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Targeted Action Plan</h4>
-                  <ul className="space-y-2">
-                    {checkupReport.recommendations.map((rec, idx) => (
-                      <li key={idx} className="flex items-start space-x-2 text-sm text-slate-200">
-                        <CheckSquare className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
-                        <span>{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               </Card>
-            )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PAGE 5: HISTORY (/history) */}
+      {activeRoute === 'history' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold text-textPrimary tracking-tight">Scan History Log</h2>
+            <Button variant="secondary" size="sm" onClick={loadHistory} isLoading={isHistoryLoading}>
+              Refresh Log
+            </Button>
           </div>
-        )}
 
-        {/* Scan Error Banner */}
-        {scanError && (
-          <div className="mb-8">
-            <Alert type="error" title="Analysis Notice">
-              {scanError}
-            </Alert>
-          </div>
-        )}
-
-        {/* Live Analysis Result & Explanation Cards */}
-        {scanResult && activeTab !== 'checkup' && activeTab !== 'history' && activeTab !== 'password' && (
-          <div className="space-y-6 mb-8">
-            <Card className="border-slate-700">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-                <div className="flex items-center space-x-3">
-                  <ShieldAlert className="w-6 h-6 text-sky-400" />
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-100">Security Assessment Report</h3>
-                    <p className="text-xs text-slate-400">
-                      Input Type: <span className="uppercase font-semibold">{activeTab}</span>
-                      {scanResult.decoded_text && ` — Decoded: ${scanResult.decoded_text}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl font-black text-slate-200">{scanResult.risk_score}<span className="text-xs text-slate-500">/100</span></span>
-                  <RiskBadge level={scanResult.risk_level} />
-                </div>
-              </div>
-
-              {/* Gemini Summary */}
-              <div className="mb-6 bg-slate-950 p-4 rounded-lg border border-slate-800">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Info className="w-4 h-4 text-sky-400" /> Security Summary
-                </h4>
-                <p className="text-sm text-slate-200 leading-relaxed font-medium">
-                  {scanResult.explanation?.summary}
-                </p>
-              </div>
-
-              {/* Why Risky */}
-              <div className="mb-6">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Why Is This Risky?</h4>
-                <ul className="space-y-2">
-                  {scanResult.explanation?.why_risky?.map((item: string, idx: number) => (
-                    <li key={idx} className="flex items-start space-x-2 text-sm text-slate-300">
-                      <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Recommended Actions */}
-              <div className="mb-6">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Recommended Actions</h4>
-                <ul className="space-y-2">
-                  {scanResult.explanation?.recommended_actions?.map((action: string, idx: number) => (
-                    <li key={idx} className="flex items-start space-x-2 text-sm text-slate-300">
-                      <CheckSquare className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
-                      <span>{action}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Educational Tips */}
-              {scanResult.explanation?.education && scanResult.explanation.education.length > 0 && (
-                <div className="mb-6 bg-sky-950/20 border border-sky-800/40 p-4 rounded-lg">
-                  <h4 className="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Lightbulb className="w-4 h-4 text-sky-400" /> Educational Advice
-                  </h4>
-                  <ul className="space-y-1 text-xs text-sky-200">
-                    {scanResult.explanation.education.map((tip: string, idx: number) => (
-                      <li key={idx}>• {tip}</li>
+          {historyRecords.length === 0 ? (
+            <EmptyState
+              title="No Past Scans Recorded"
+              description="Scans performed across URL, Message, QR, and Image tools will appear here."
+              action={
+                <Button variant="primary" size="sm" onClick={() => setActiveRoute('home')}>
+                  Perform First Scan
+                </Button>
+              }
+            />
+          ) : (
+            <Card className="p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-border text-xs font-bold text-textSecondary uppercase tracking-wider">
+                      <th className="p-4">Type</th>
+                      <th className="p-4">Target / Indicator</th>
+                      <th className="p-4">Risk Level</th>
+                      <th className="p-4">Score</th>
+                      <th className="p-4">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {historyRecords.map((rec) => (
+                      <tr key={rec.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4 font-bold uppercase text-xs text-brand-600">{rec.scan_type}</td>
+                        <td className="p-4 font-mono text-xs text-textPrimary truncate max-w-xs">{rec.indicator}</td>
+                        <td className="p-4"><RiskBadge level={rec.risk_level} size="sm" /></td>
+                        <td className="p-4 font-bold text-textPrimary">{rec.risk_score}/100</td>
+                        <td className="p-4 text-xs text-textSecondary">{new Date(rec.created_at).toLocaleString()}</td>
+                      </tr>
                     ))}
-                  </ul>
-                </div>
-              )}
+                  </tbody>
+                </table>
+              </div>
             </Card>
-          </div>
-        )}
-      </main>
+          )}
+        </div>
+      )}
 
-      <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        APATI ASPIS — Digital Safety Platform. Risk analysis provided for educational purposes.
-      </footer>
-    </div>
+      {/* PAGE 6: ABOUT (/about) */}
+      {activeRoute === 'about' && (
+        <div className="space-y-6 max-w-2xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-textPrimary tracking-tight">About APATI ASPIS</h2>
+          
+          <Card className="space-y-4">
+            <h3 className="text-lg font-bold text-textPrimary">What APATI ASPIS Is</h3>
+            <p className="text-sm text-textSecondary leading-relaxed">
+              APATI ASPIS is a digital safety platform that helps users analyze suspicious URLs, messages, QR codes, screenshots, and security habits to detect deception before harm occurs.
+            </p>
+
+            <h3 className="text-lg font-bold text-textPrimary pt-2">What APATI ASPIS Is NOT</h3>
+            <ul className="text-sm text-textSecondary space-y-1 list-disc pl-5">
+              <li>Not an antivirus software or endpoint security agent (EDR).</li>
+              <li>Not a sandbox malware execution suite or SOC platform.</li>
+              <li>Does not guarantee that an indicator is 100% safe or malicious.</li>
+            </ul>
+
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-xs font-bold text-textPrimary uppercase tracking-wider mb-2">Legal Disclaimer</h4>
+              <p className="text-xs text-textSecondary leading-relaxed">
+                APATI ASPIS provides risk analysis and educational guidance for digital safety. Risk assessments are generated via deterministic heuristics and threat intelligence datasets.
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {scanError && (
+        <div className="mt-6">
+          <ErrorState message={scanError} onRetry={() => setScanError(null)} />
+        </div>
+      )}
+    </Layout>
   );
 };
 

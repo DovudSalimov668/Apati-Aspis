@@ -1,15 +1,17 @@
 import React from 'react';
 
 interface CardProps {
-  title?: string;
-  className?: string;
   children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
 }
 
-export const Card: React.FC<CardProps> = ({ title, className = '', children }) => {
+export const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => {
   return (
-    <div className={`bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl ${className}`}>
-      {title && <h3 className="text-lg font-semibold text-slate-200 mb-4">{title}</h3>}
+    <div
+      onClick={onClick}
+      className={`bg-surface border border-border rounded-xl p-6 shadow-sm transition-shadow ${onClick ? 'cursor-pointer hover:shadow-md' : ''} ${className}`}
+    >
       {children}
     </div>
   );

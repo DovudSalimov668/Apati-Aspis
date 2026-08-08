@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 243" width="250" height="243">
+  <title>APATI ASPIS Logo</title>
+  <desc>Black and blue geometric APATI ASPIS symbol with central circle and radiating shapes.</desc>
+
+  <!-- Black upper A -->
+  <path fill="#050505" d="M94 18 L108 22 L122 91 L111 102 Z"/>
+  <path fill="#050505" d="M152 15 L141 21 L128 91 L139 102 Z"/>
+  <path fill="#050505" d="M104 52 L146 52 L141 62 L108 62 Z"/>
+
+  <!-- Black side rays -->
+  <path fill="#050505" d="M19 116 L91 116 L94 126 L24 144 L62 128 Z"/>
+  <path fill="#050505" d="M231 115 L158 116 L155 126 L225 144 L188 128 Z"/>
+
+  <!-- Central circle -->
+  <circle cx="125" cy="124" r="15" fill="#050505"/>
+
+  <!-- Blue upper diagonal rays -->
+  <path fill="#0757D9" d="M43 61 L98 105 L92 113 Z"/>
+  <path fill="#0757D9" d="M205 61 L153 105 L158 113 Z"/>
+
+  <!-- Blue lower diagonal rays -->
+  <path fill="#0757D9" d="M47 204 L94 145 L101 151 Z"/>
+  <path fill="#0757D9" d="M201 204 L156 145 L149 151 Z"/>
+
+  <!-- Blue lower A -->
+  <path fill="#0757D9" d="M109 151 L123 151 L101 234 L88 234 Z"/>
+  <path fill="#0757D9" d="M141 151 L127 151 L149 234 L162 234 Z"/>
+  <path fill="#0757D9" d="M99 190 L152 190 L148 202 L96 202 Z"/>
+</svg>
