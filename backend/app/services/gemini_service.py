@@ -100,7 +100,8 @@ Evidence Reasons: {json.dumps(reasons)}
 Provide your explanation in JSON format.
 """
 
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+
 
     payload = {
         "contents": [

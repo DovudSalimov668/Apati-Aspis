@@ -1,134 +1,118 @@
-# APATI ASPIS — Shield Against Digital Deception
+# 🛡️ APATI ASPIS — Shield Against Digital Deception
 
-APATI ASPIS is a digital-safety platform designed to analyze suspicious URLs, messages, QR codes, and screenshots to detect risk, explain threat indicators, and empower users with actionable security advice.
+> **Tagline:** Digital Safety Platform to Detect Deception, Understand Risk, and Take Safer Actions.
 
----
-
-## Technical Architecture
-
-- **Frontend:** React + TypeScript + Vite + Tailwind CSS + Lucide React
-- **Backend:** Python 3.12+ + FastAPI + Pydantic v2 + SQLAlchemy 2
-- **Database:** SQLite
-- **AI Explanation Layer:** Gemini API (Direct integration)
-- **Threat Intelligence:** PhishTank, URLhaus, optional VirusTotal
+APATI ASPIS is a security-minded, free-to-demo digital safety platform designed to analyze suspicious URLs, SMS/email messages, QR codes, screenshots, password breach risks, and personal security habits.
 
 ---
 
-## Project Structure
+## ✨ Features & Capabilities
 
-```text
-apati-aspis/
-├── frontend/             # React + Vite TypeScript Frontend
-│   ├── src/
-│   │   ├── components/   # Reusable UI Components (Header, Card, Alert, Button, Input, RiskBadge)
-│   │   ├── services/     # API Client Service
-│   │   └── App.tsx       # Main Application Shell
-│   ├── package.json
-│   └── vite.config.ts
-│
-├── backend/              # FastAPI Python Backend
-│   ├── app/
-│   │   ├── main.py       # Server entrypoint & middleware
-│   │   ├── config.py     # Pydantic environment configuration
-│   │   ├── core/         # Exception handlers & core logic
-│   │   ├── db/           # SQLAlchemy 2 database session
-│   │   ├── api/          # REST API routers
-│   │   ├── services/     # Business logic services
-│   │   └── analysis/     # Deterministic risk engine & analyzers
-│   ├── tests/            # Pytest test suite
-│   └── requirements.txt
-│
-├── docs/                 # System Architecture & Specs
-│   ├── architecture.md
-│   ├── api.md
-│   ├── security.md
-│   └── threat-intelligence.md
-│
-├── .env.example          # Environment variables template
-├── .gitignore
-├── GEMINI.md             # Primary project specification
-└── README.md
-```
+1. **URL Scanner & Normalizer:**
+   - Canonicalizes scheme, host, Punycode/IDN domains, ports, and query parameters.
+   - Heuristics engine evaluating 9 structural risk signals (direct IP hosts, non-standard ports, `@` symbol userinfo, executable path extensions, scam TLDs).
 
----
+2. **SSRF Protection Shield (Mandatory Defense):**
+   - Pre-flight DNS resolution checking all IPv4/IPv6 addresses against prohibited ranges (`127.0.0.1`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.169.254` cloud metadata).
+   - Protects against DNS rebinding and unsafe redirect loops.
 
-## Quickstart Setup & Local Execution
+3. **Multi-Provider Threat Intelligence:**
+   - Concurrent async queries to **Google Safe Browsing API**, **URLhaus API**, and optional **VirusTotal API** with 5-minute TTL caching.
 
-### Prerequisites
-- **Python 3.12+**
-- **Node.js 18+** & `npm`
+4. **Deterministic Risk Engine:**
+   - Authoritative security decision layer returning risk scores (`0–100`), 4 risk tiers (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`), and confidence ratings (`HIGH`, `MEDIUM`, `LOW`).
+
+5. **Gemini AI Explanation Layer:**
+   - Synthesizes clear, non-technical explanations (`summary`, `why_risky`, `recommended_actions`, `education`).
+   - Includes automatic **Deterministic Fallback Engine** if Gemini API key is missing or rate-limited.
+   - Built-in prompt injection protection (`<UNTRUSTED_USER_CONTENT>` encapsulation).
+
+6. **Multi-Input Analysis:**
+   - **Message / Text:** Social engineering language detection (urgency, credential requests, payment demands, brand impersonation) + URL extraction.
+   - **QR Code:** Local open-source decoding via `Pillow` + `pyzbar`.
+   - **Image / Screenshot:** Decodes embedded QR codes with local OCR fallback.
+
+7. **Digital Security Checkup:**
+   - 12 deterministic questions across 6 categories (phishing, password hygiene, MFA, social engineering, payment safety, device security).
+
+8. **Password Breach Checker:**
+   - Uses **Have I Been Pwned (HIBP)** with **K-Anonymity SHA-1 prefixing**. Plaintext passwords are **never** logged, stored, or sent across the network.
+
+9. **SQLite Database Persistence:**
+   - Persists scan history and checkup results locally via SQLAlchemy 2 & Alembic (`apati_aspis.db`).
+
+10. **Hackathon Demo Mode:**
+    - Simulated demo scenarios (`POST /api/scan/demo` for `safe`, `moderate`, `high`, `critical`) clearly labeled `[DEMO / SIMULATED RESULT]`.
 
 ---
 
-### 1. Environment Setup
-Copy `.env.example` to `.env`:
+## 🛠️ Technology Stack
+
+- **Frontend:** React 18, TypeScript 5, Vite 5, Tailwind CSS 3.4, Lucide React icons.
+- **Backend:** Python 3.12+, FastAPI, Pydantic v2, HTTPX async networking.
+- **Database:** SQLite with SQLAlchemy 2 ORM & Alembic migrations.
+- **Testing:** Pytest (81 backend tests) & Vitest (1 frontend test).
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Backend Setup
 ```bash
-cp .env.example .env
+cd backend
+python -m venv .venv
+# On Windows PowerShell:
+.venv/Scripts/Activate.ps1
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
----
-
-### 2. Backend Setup & Local Server
-
-1. Navigate to `backend/` and create a virtual environment:
-   ```bash
-   cd backend
-   python -m venv .venv
-   ```
-
-2. Activate virtual environment:
-   - **Windows:** `.venv\Scripts\activate`
-   - **macOS/Linux:** `source .venv/bin/activate`
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start FastAPI server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-5. Verify server health check:
-   Open [http://localhost:8000/health](http://localhost:8000/health)
-
----
-
-### 3. Backend Test Suite
-
-Run pytest in the `backend/` directory:
+### 2. Frontend Setup
 ```bash
-python -m pytest backend/tests
+# In PowerShell:
+$env:PATH = "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VisualStudio\NodeJs;" + $env:PATH
+cd frontend
+npm install
+npm run dev
+```
+Open **`http://localhost:3000`** in your browser!
+
+---
+
+## ⚙️ Environment Configuration (`.env`)
+
+```env
+APP_ENV=development
+APP_PORT=8000
+DEBUG=True
+
+# Gemini AI API Key (Optional — Local fallback active if empty)
+GEMINI_API_KEY=
+
+# Threat Intelligence API Keys
+GOOGLE_SAFE_BROWSING_API_KEY=
+URLHAUS_AUTH_KEY=
+VIRUSTOTAL_API_KEY=
+
+# Database
+DATABASE_URL=sqlite:///./apati_aspis.db
 ```
 
 ---
 
-### 4. Frontend Setup & Local Execution
+## 🧪 Running Automated Tests
 
-1. Navigate to `frontend/`:
-   ```bash
-   cd frontend
-   ```
+```bash
+# Backend Test Suite (81 tests)
+backend/.venv/Scripts/python -m pytest backend/tests
 
-2. Install npm packages:
-   ```bash
-   npm install
-   ```
-
-3. Start Vite development server:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000)
-
-4. Run frontend tests:
-   ```bash
-   npm test
-   ```
+# Frontend Vitest Suite
+cd frontend
+npx vitest run
+```
 
 ---
 
-## Security Disclaimer
+## ⚠️ Disclaimer
 
-APATI ASPIS provides risk analysis and educational guidance. It does not guarantee that an indicator is safe or malicious and should not replace professional security analysis.
+> APATI ASPIS provides risk analysis and educational guidance for digital safety. It does not guarantee that an indicator is completely safe or malicious and should not replace professional enterprise security analysis.

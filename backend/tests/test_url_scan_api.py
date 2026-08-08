@@ -47,3 +47,12 @@ def test_scan_suspicious_ip_url():
     assert data["is_valid"] is True
     assert data["risk_score"] >= 50
     assert data["risk_level"] in ("HIGH", "CRITICAL")
+
+def test_demo_mode_scenarios():
+    for scen in ["safe", "moderate", "high", "critical"]:
+        res = client.post("/api/scan/demo", json={"scenario": scen})
+        assert res.status_code == 200
+        data = res.json()
+        assert "[DEMO / SIMULATED RESULT]" in data["reasons"][0]
+        assert "risk_score" in data
+        assert "risk_level" in data

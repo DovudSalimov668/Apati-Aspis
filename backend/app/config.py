@@ -1,7 +1,11 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Ensure SSLKEYLOGFILE does not trigger permission errors on Windows sandbox environments
+os.environ.pop("SSLKEYLOGFILE", None)
+
 class Settings(BaseSettings):
+
     APP_NAME: str = "APATI ASPIS API"
     APP_VERSION: str = "0.1.0"
     APP_ENV: str = "development"
