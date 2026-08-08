@@ -159,15 +159,20 @@ export const App: React.FC = () => {
     if (!q) return;
     const updated = { ...userAnswers, [q.id]: optionId };
     setUserAnswers(updated);
+
     if (currentQIndex < questions.length - 1) {
       setCurrentQIndex(currentQIndex + 1);
+    } else {
+      // Last question answered -> submit directly with latest answers dict
+      handleFinishCheckup(updated);
     }
   };
 
-  const handleFinishCheckup = async () => {
+  const handleFinishCheckup = async (answersOverride?: Record<string, string>) => {
     setIsCheckupSubmitting(true);
     try {
-      const report = await submitCheckup(userAnswers);
+      const payloadAnswers = answersOverride || userAnswers;
+      const report = await submitCheckup(payloadAnswers);
       setCheckupReport(report);
     } catch (err: any) {
       setScanError(err.message || 'Failed to evaluate security checkup');
@@ -175,6 +180,7 @@ export const App: React.FC = () => {
       setIsCheckupSubmitting(false);
     }
   };
+
 
   return (
     <Layout activeRoute={activeRoute} onNavigate={(r) => { setActiveRoute(r); setScanError(null); }}>
@@ -611,10 +617,11 @@ export const App: React.FC = () => {
                       Previous
                     </Button>
                     {currentQIndex === questions.length - 1 ? (
-                      <Button variant="primary" size="md" onClick={handleFinishCheckup} isLoading={isCheckupSubmitting}>
+                      <Button variant="primary" size="md" onClick={() => handleFinishCheckup()} isLoading={isCheckupSubmitting}>
                         Submit & View Score
                       </Button>
                     ) : (
+
                       <Button variant="primary" size="sm" onClick={() => setCurrentQIndex(currentQIndex + 1)}>
                         Next Question
                       </Button>
@@ -627,11 +634,35 @@ export const App: React.FC = () => {
             /* Results Report Page */
             <div className="space-y-6">
               <Card className="text-center space-y-4">
-                <ScoreDial score={checkupReport.overall_score} level={checkupReport.security_level === 'EXCELLENT' ? 'LOW' : 'HIGH'} size={130} />
-                <h2 className="text-2xl font-extrabold text-textPrimary">Your Digital Security Profile</h2>
+                <ScoreDial
+                  score={checkupReport.overall_score}
+                  level={checkupReport.overall_score >= 80 ? 'LOW' : checkupReport.overall_score >= 50 ? 'MODERATE' : 'HIGH'}
+                  size={130}
+                />
+                <div>
+                  <h2 className="text-2xl font-extrabold text-textPrimary">Your Digital Security Profile</h2>
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand-600 mt-1">
+                    Security Level: {checkupReport.security_level} ({checkupReport.overall_score}/100)
+                  </p>
+                </div>
+
                 <Alert type="warning" title={`Weakest Category: ${checkupReport.weakest_category}`}>
-                  Focus your immediate security improvements on this category to lower risk.
+                  Focus your immediate security improvements on this category to lower your risk profile.
                 </Alert>
+
+                <div className="pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setCheckupReport(null);
+                      setCurrentQIndex(0);
+                      setUserAnswers({});
+                    }}
+                  >
+                    Retake Security Checkup
+                  </Button>
+                </div>
               </Card>
 
               <Card className="space-y-4">
@@ -641,7 +672,7 @@ export const App: React.FC = () => {
                     <div key={catKey} className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold">
                         <span className="text-textPrimary">{info.title}</span>
-                        <span className="text-brand-600">{info.score}%</span>
+                        <span className="text-brand-600">{info.score}% ({info.earned}/{info.max} pts)</span>
                       </div>
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-border">
                         <div
@@ -653,7 +684,22 @@ export const App: React.FC = () => {
                   ))}
                 </div>
               </Card>
+
+              <Card className="bg-brand-50/50 border-brand-500/20">
+                <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4 text-brand-600" /> Actionable Recommendations
+                </h3>
+                <ul className="space-y-3">
+                  {checkupReport.recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start space-x-2 text-sm text-textPrimary font-medium">
+                      <span className="text-brand-600 font-bold">•</span>
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
             </div>
+
           )}
         </div>
       )}
