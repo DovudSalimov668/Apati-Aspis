@@ -106,7 +106,6 @@ export interface PasswordCheckResponse {
   recommendations: string[];
 }
 
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export async function fetchHealth(): Promise<HealthResponse> {
@@ -169,6 +168,18 @@ export async function scanImageFile(file: File): Promise<QrScanResponse> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error?.message || `Scan request failed with status: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function scanDemo(scenario: string): Promise<UrlScanResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/scan/demo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario }),
+  });
+  if (!response.ok) {
+    throw new Error(`Demo scenario request failed`);
   }
   return response.json();
 }

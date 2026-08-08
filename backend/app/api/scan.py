@@ -376,7 +376,7 @@ async def scan_image(file: UploadFile = File(...), db: Session = Depends(get_db)
 
 
 @scan_router.post("/demo", response_model=UrlScanResponse)
-async def scan_demo(payload: DemoScanRequest):
+async def scan_demo(payload: DemoScanRequest, db: Session = Depends(get_db)):
     """
     Generates clearly labeled demo scenarios for hackathon presentations.
     Guarantees reliable demonstration even if external APIs are unreachable.
@@ -412,7 +412,7 @@ async def scan_demo(payload: DemoScanRequest):
         why_risky = ["Active threat intelligence match flagged for phishing.", "Direct IP host address bypasses standard domain name registration."]
         actions = ["Close the browser window immediately.", "Do not enter any personal credentials or financial details."]
 
-    return UrlScanResponse(
+    res = UrlScanResponse(
         raw_url=url,
         normalized_url=url,
         is_valid=True,
@@ -432,3 +432,18 @@ async def scan_demo(payload: DemoScanRequest):
             education=["Always inspect the full domain name in your browser address bar before logging in."]
         )
     )
+
+    save_scan_record(
+        db=db,
+        scan_type="demo",
+        indicator=f"[DEMO: {scen.upper()}] {url}",
+        domain="demo.target.example",
+        risk_score=score,
+        risk_level=level,
+        confidence="HIGH",
+        reasons=reasons,
+        evidence=res.evidence
+    )
+
+    return res
+

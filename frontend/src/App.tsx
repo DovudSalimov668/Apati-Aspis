@@ -12,10 +12,11 @@ import { DemoBadge } from './components/DemoBadge';
 import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import {
-  fetchHealth, scanUrl, scanMessage, scanQrFile, scanImageFile,
+  fetchHealth, scanUrl, scanMessage, scanQrFile, scanImageFile, scanDemo,
   fetchCheckupQuestions, submitCheckup, fetchScanHistory, checkPassword,
   CheckupQuestion, CheckupReport, ScanRecordHistory, PasswordCheckResponse
 } from './services/api';
+
 import {
   Search, FileText, QrCode, Image as ImageIcon,
   AlertTriangle, CheckSquare, Eye, EyeOff, Upload, ChevronDown, ChevronUp, Lock, CheckCircle2, Info
@@ -125,12 +126,7 @@ export const App: React.FC = () => {
     setIsScanning(true);
     setScanError(null);
     try {
-      const response = await fetch('http://localhost:8000/api/scan/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scen }),
-      });
-      const res = await response.json();
+      const res = await scanDemo(scen);
       setScanResult(res);
       setActiveRoute('result');
     } catch (err: any) {
@@ -139,6 +135,8 @@ export const App: React.FC = () => {
       setIsScanning(false);
     }
   };
+
+
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
